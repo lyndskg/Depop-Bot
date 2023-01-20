@@ -11,15 +11,21 @@ loginButton.addEventListener("click", async () => {
   //get bearer token / username 
   setBearer();
 
-  login(document.getElementById("UserName").value);
+  login(document.getElementById("UserName").value, document.getElementById("PassWord").value);
 });
 
-function login(userNameInput) {
+function login(userNameInput, passWordInput) {
   let username = userNameInput;
-  console.log(username);
+  let password = passWordInput;
+
+  console.log(username, password);
 
   chrome.storage.sync.set({ username }, function () {
     console.log('username is set to ' + username);
+  });
+
+  chrome.storage.sync.set({ password }, function () {
+    console.log('password is set to ' + password);
   });
 
   const requestOptions = {

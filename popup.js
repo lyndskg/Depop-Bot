@@ -8,7 +8,8 @@ chrome.storage.sync.get(['isLoggedIn'], function (result) {
     if (!isButton) {
       return;
     }
-  
+
+    getUserItems();
     getItemThenRefresh(event.target.id);
   })
   
@@ -29,6 +30,31 @@ chrome.storage.sync.get(['isLoggedIn'], function (result) {
         .then(result => refreshListing(result, cookie.bearer))
         .catch(error => console.log('error', error));
     });
+  }
+
+  function getUserItems() {
+    chrome.storage.sync.get(['userId'], function (result) {
+      console.log('userId is: ' + result.userId);
+  
+      paginatedDisplay("", false, result.userId.toString());
+    });
+  }
+  
+  function paginatedDisplay(page, end, userId){
+    var requestOptions = {
+      method: 'GET',
+      redirect: 'follow'
+    };
+    fetch("https://webapi.depop.com/api/v1/shop/" + userId + "/products/?limit=24&offset_id="+page, requestOptions)
+      .then(response => response.json())
+      .then(result => {
+        displayItems(result)
+  
+        if (end == false) {
+          return paginatedDisplay(result.meta.last_offset_id, result.meta.end, userId);
+        }
+      })
+      .catch(error => console.log('error', error));
   }
 
   async function displayItems(result) {
@@ -73,7 +99,7 @@ chrome.storage.sync.get(['isLoggedIn'], function (result) {
       }
     }
   }
-  
+
   function refreshListing(item, bearer) {
     //loop through values and created refresh request
     console.log(item);
@@ -152,11 +178,11 @@ chrome.storage.sync.get(['isLoggedIn'], function (result) {
     };
   
     chrome.storage.sync.get(['userId'], function (result) {
-      paginatedRefresh('', false, result.userId.toString());
+      paginatedRefresh(false, result.userId.toString());
     });
   
-    function paginatedRefresh(page, end, userId) { //24 limit
-      fetch("https://webapi.depop.com/api/v1/shop/" + userId + "/products/?limit=24&offset_id=" + page, requestOptions)
+    function paginatedRefresh(end, userId) { //24 limit
+      fetch("https://depop.com/" + userId, requestOptions)
         .then(response => response.json())
         .then(result => {
           //refresh all items from current api call
@@ -164,7 +190,7 @@ chrome.storage.sync.get(['isLoggedIn'], function (result) {
   
           //keep fetching if not at end
           if (end == false) {
-            return paginatedRefresh(result.meta.last_offset_id, result.meta.end, userId);
+            return paginatedRefresh(result.meta.end, userId);
           }
         });
     }
