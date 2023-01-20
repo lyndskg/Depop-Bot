@@ -1,41 +1,27 @@
 <!DOCTYPE html>
-<html>
-
-<head>
-  <link rel="stylesheet" href="styles.css">
-</head>
-
-<body>
-  <div id="content">
-    <h1>Depop Bot</h1>
-
-    <!--KEEP in popup.html-->
-    <!-- style="display: none;" before username input. change to visable after and make username input displa none-->
-    <div id="LoggedInView" style="display: visible;">
-      <h2>Items</h2>
-      <div id="itemsDiv">
-        <table id="ItemsTable">
-          <tr>
-            <th style="width: 175px;">Description</th>
-            <th>Price</th>
-            <!--add ability to change price of listing-->
-            <th>Last Refreshed</th>
-            <!--<th>Choose multiple</th>-->
-            <th style="display: table; margin: 0 auto;">Refresh</th>
-          </tr>
-        </table>
-      </div>
-      <div id="refreshAll">
-        <br>
-        <!--<h3>Click to refresh all</h3>-->
-        <button id="refreshListings">Refresh All</button>
-      </div>
-      <br>
-      <button id="SignOutButton">Sign Out</button>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <div class="settings">
+        <h1 class="settings settings--title">Settings</h1>
+        <img class="settings image">
+        <div class="sliders">
+            <h3 class="settings settings--actions slider--headers">Individual Refresh Speed</h3>
+            <h3 class="settings settings--actions__number"></h3>
+            <input type="range" min="10" max="60" value = "50" class="sliders--action">
+            <h3 class="settings settings--hours slider--headers">Auto-Refresh Interval</h3>
+            <h3 class="settings settings--hour__number"></h3>
+            <input type="range" min="1" max="24" value = "8" class="sliders--hours">
+        </div>
+        <div class="refresh__button">
+            <button class="refresh__button--button">Refresh</button>
+        </div>
     </div>
-  </div>
-</body>
-<script src="cookie.js"></script>
-<script src="popup.js"></script>
-<script src="logout.js"></script>
+    <script src="./popup.js" type="module"></script>
+  </body>
 </html>

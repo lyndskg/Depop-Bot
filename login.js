@@ -33,7 +33,7 @@ function login(userNameInput, passWordInput) {
     redirect: 'follow'
   };
 
-  fetch("https://webapi.depop.com/api/v1/shop/" + userNameInput, requestOptions)
+  fetch("https://depop.com/" + userNameInput, requestOptions)
     .then(response => response.json())
     .then(result => {
       userId = result.id;

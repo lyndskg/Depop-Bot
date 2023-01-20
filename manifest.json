@@ -6,7 +6,7 @@
     "manifest_version": 3,
 
     "permissions": ["activeTab", "declarativeContent", "storage", "scripting", "identity", "cookies"],
-    "host_permissions": ["<all_urls>"], 
+    "host_permissions": ["*://*.depop.com/*"], 
     
     "background": {
         "service_worker": "background.js"

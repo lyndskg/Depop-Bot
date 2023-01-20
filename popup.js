@@ -1,214 +1,280 @@
-//LOGGED IN PAGE FUNCTIONS
-chrome.storage.sync.get(['isLoggedIn'], function (result) {
-  
-  let itemsTable = document.getElementById('ItemsTable');
-  
-  itemsTable.addEventListener('click', async (event) => {
-    const isButton = event.target.nodeName === 'BUTTON';
-    if (!isButton) {
-      return;
+document.body.onload = addSliderValue("sliders--action", "settings--actions__number", "Seconds");
+document.body.onload = addSliderValue("sliders--hours", "settings--hour__number", "Hours");
+let refreshButton = null;
+
+let tokens = {
+    accesstoken: await GetAccessToken(),
+    userid: await GetUserId(),
+    actionRefreshRate: null,
+    refreshRateAllInMinutes: null,
+    numberOfListings: null,
+    timeUntilNextRefresh: null,
+    itemsRefreshed: 0,
+    interval: null,
+    stopRefresh: false
+}
+document.body.onload = OnLoad();
+
+function addSliderValue(inputElement, outputElement, outputType) {
+    let inputSlider = document.querySelector(`.${inputElement}`);
+    let outputSliderValue = document.querySelector(`.${outputElement}`);
+    outputSliderValue.innerHTML = inputSlider.value + " " + outputType;
+
+    inputSlider.oninput = function() {
+    outputSliderValue.innerHTML = this.value + " " + outputType;
+    if (inputElement == "sliders--action"){
+      tokens.actionRefreshRate = this.value;
     }
-
-    getUserItems();
-    getItemThenRefresh(event.target.id);
-  })
-  
-  async function getItemThenRefresh(slug) {
-    chrome.storage.sync.get(['username', 'bearer'], function (cookie) {
-      var myHeaders = new Headers();
-  
-      myHeaders.append("authorization", "Bearer " + cookie.bearer);
-      
-      var requestOptions = {
-        method: 'GET',
-        headers: myHeaders,
-        redirect: 'follow'
-      };
-  
-      fetch("https://webapi.depop.com/api/v2/products/" + slug, requestOptions)
-        .then(response => response.json())
-        .then(result => refreshListing(result, cookie.bearer))
-        .catch(error => console.log('error', error));
-    });
+    else {
+      tokens.refreshRateAllInMinutes = this.value * 60;
+    }
   }
-
-  function getUserItems() {
-    chrome.storage.sync.get(['userId'], function (result) {
-      console.log('userId is: ' + result.userId);
-  
-      paginatedDisplay("", false, result.userId.toString());
-    });
+}
+function showPicture(itemPicture){
+    let image;
+    try {
+      image = document.querySelector("img");
+    }
+    catch {
+      image = document.createElement("img");
+      image.className = "image";
+      let imageParent = document.querySelector(".settings--title");
+      imageParent.appendChild(image);
+    }
+    image.src = itemPicture;
+    image.style.width = "5rem";
+    image.style.height = "5rem";
+    image.style.border = "1px solid black";
+}
+function RemovePicture(){
+    let image = document.querySelector("img");
+    image.remove();
+}
+function displayNumberOfUnSoldItems(){
+  let refreshButton = document.querySelector(".refresh__button--button");
+  let numberOfItems = document.createElement("p");
+  numberOfItems.innerHTML = `Itmes Refreshed: 0/${tokens.numberOfListings}`;
+  refreshButton.appendChild(numberOfItems);
+}
+function incrementItems() {
+  let numberOfItems = document.querySelector("p");
+  tokens.itemsRefreshed++;
+  numberOfItems.innerHTML = `Itmes Refreshed: ${tokens.itemsRefreshed}/${tokens.numberOfListings}`;
+}
+async function refreshClick() {
+  if (refreshButton.innerHTML == "Refresh") {
+    tokens.stopRefresh = false;
+    refreshButton.innerHTML = "Refreshing...";
+    await RefreshAllListings();
   }
-  
-  function paginatedDisplay(page, end, userId){
-    var requestOptions = {
-      method: 'GET',
-      redirect: 'follow'
-    };
-    fetch("https://webapi.depop.com/api/v1/shop/" + userId + "/products/?limit=24&offset_id="+page, requestOptions)
-      .then(response => response.json())
-      .then(result => {
-        displayItems(result)
-  
-        if (end == false) {
-          return paginatedDisplay(result.meta.last_offset_id, result.meta.end, userId);
-        }
-      })
-      .catch(error => console.log('error', error));
+  else if (refreshButton.innerHTML = "Refreshing..."){
+    refreshButton.innerHTML = "Refresh";
+    tokens.stopRefresh = true;
+    RemovePicture();
   }
-
-  async function displayItems(result) {
-    for (const item of result.products) {
-      if (item.status == "ONSALE") {
-        var table = document.getElementById("ItemsTable");
-        var newRow = table.insertRow();
-  
-        // Insert a cell at the end of the row
-        var descCell = newRow.insertCell(0);
-  
-        //find start of description after username
-        var start = 0;
-        for (char of item.slug) {
-          if (char == '-') {
-            break;
-          }
-          start++;
-        }
-  
-        // Append a text node to the cell
-        var newText = document.createTextNode(item.slug.substr(++start, item.slug.length));
-        descCell.appendChild(newText);
-  
-        var priceCell = newRow.insertCell(1);
-  
-        newText = document.createTextNode(item.price.currency_symbol + item.price.price_amount);
-        priceCell.appendChild(newText);
-  
-        var lastRefreshCell = newRow.insertCell(2);
-  
-        newText = document.createTextNode("to-do  ");
-        lastRefreshCell.appendChild(newText);
-  
-        var updateButtonCell = newRow.insertCell(3);
-  
-        var btn = document.createElement("BUTTON");   // Create a <button> element
-        btn.setAttribute("name", "refresh");
-        btn.setAttribute("id", item.slug);
-        btn.innerHTML = "Refresh";
-        updateButtonCell.appendChild(btn);
+  else {
+    tokens.interval = clearInterval();
+    let numberOfItems = document.createElement("p");
+    numberOfItems.remove();
+    refreshButton.innerHTML = "Refresh";
+  }
+}
+function OnLoad() {
+  refreshButton = document.querySelector(".refresh__button--button");
+  refreshButton.addEventListener("click", refreshClick);
+  tokens.actionRefreshRate = document.querySelector(".sliders--action").value;
+  tokens.refreshRateAllInMinutes = document.querySelector(".sliders--hours").value * 60;
+}
+function interval() {
+  let seconds = 60;
+  tokens.refreshRateAllInMinutes--;
+  tokens.interval = setInterval(function() {
+    if(tokens.refreshRateAllInMinutes == 0){
+      RefreshAllListings();
+      tokens.refreshRateAllInMinutes = document.querySelector(".sliders--hours").value;
+    }
+    else {
+      let hours = Math.floor(tokens.refreshRateAllInMinutes/60);
+      let minutes = tokens.refreshRateAllInMinutes % 60;
+      let numberOfItems = document.querySelector("p");
+      seconds--;
+      if (seconds == 0){
+        seconds = 60;
+        tokens.refreshRateAllInMinutes--;
       }
+      numberOfItems.innerHTML = `Time Remaining Until Next Refresh ${hours}:${minutes}:${seconds}`;
     }
+  }, 1000);
+}
+
+function sleep(seconds) {
+    return new Promise(resolve => setTimeout(resolve, seconds * 1000));
   }
 
-  function refreshListing(item, bearer) {
-    //loop through values and created refresh request
-    console.log(item);
-  
-    function getPictureIds() {
-      let ids = [];
-      for (const picture of item.pictures) {
-        ids.push(picture[0].id);
-      }
-      console.log(ids);
-      return ids;
-    }
-  
-    var myHeaders = new Headers();
-    myHeaders.append("authorization", "Bearer " + bearer);
-    myHeaders.append("content-type", "application/json");
-  
-    var raw = JSON.stringify({
-      "pictureIds":
-        getPictureIds(),
-      "description": item.description,
-      "categoryId": item.categoryId,
-      "quantity": item.quantity,
-      "nationalShippingCost": item.price.nationalShippingCost,
-      "internationalShippingCost": item.price.internationalShippingCost,
-      "priceAmount": item.price.priceAmount,
-      "brandId": item.brandId,
-      "condition": item.condition,
-      "colour": item.colour,
-      "source": item.source,
-      "age": item.age,
-      "style": item.style,
-      "shippingMethods": item.shippingMethods,
-      "priceCurrency": item.price.currencyName,
-      "address": item.address,
-      "countryCode": item.countryCode,
-      "attributes": item.attributes,
-      "isKids": item.isKids,
-      "gender": item.gender,
-      "group": item.group,
-      "variantSetId": item.variantSetId,
-      "variants": item.variants
-    });
-  
-    console.log(raw);
-  
-    var requestOptions = {
-      method: 'PUT',
-      headers: myHeaders,
-      body: raw,
-      redirect: 'follow'
-    };
-  
-    fetch("https://webapi.depop.com/api/v1/products/" + item.slug, requestOptions)
-      .then(response => response.text())
-      .then(result => console.log(result))
-      .catch(error => console.log('error', error));
-  }
-
-  let refreshListingsButton = document.getElementById("refreshListings");
-  
-  refreshListingsButton.addEventListener("click", async () => {
-    //getUser
-    console.log("refreshing...");
-    refreshAllListings();
+async function GetAccessToken(){
+  try{
+    let accessToken = await chrome.cookies.get({
+      url: "https://www.depop.com",
+      name: "access_token"
   });
 
-  async function refreshAllListings() {
-    //get all items
-    //iterate over response passing slug to getItem
-    //pause for 0.5 seconds for each item
-  
-    var requestOptions = {
-      method: 'GET',
-      redirect: 'follow'
-    };
-  
-    chrome.storage.sync.get(['userId'], function (result) {
-      paginatedRefresh(false, result.userId.toString());
-    });
-  
-    function paginatedRefresh(end, userId) { //24 limit
-      fetch("https://depop.com/" + userId, requestOptions)
-        .then(response => response.json())
-        .then(result => {
-          //refresh all items from current api call
-          iterateThroughItems(result.products);
-  
-          //keep fetching if not at end
-          if (end == false) {
-            return paginatedRefresh(result.meta.end, userId);
-          }
-        });
-    }
-  
-    async function iterateThroughItems(items) {
-      let itemCount = 0;
-      for (const item of items) {
-        itemCount++;
-        //wait 0.5 sec
-        delay(500);
-        getItemThenRefresh(item.slug);
-      }
-      console.log("Items refreshed: " + itemCount);
-    }
+  return accessToken.value;
   }
+  catch {
+    console.log("This is what happens");
+  }
+}
+async function GetUserId(){
+    let userId = await chrome.cookies.get({
+        url: "https://www.depop.com",
+        name: "user_id"
+    });
 
-  //delay helper function
-  const delay = ms => new Promise(res => setTimeout(res, ms));
+    return userId.value;
+}
+async function GetTwentyFourListings(accessToken, cursor){
+    const options = {
+        method: 'GET',
+        headers: {Authorization: `Bearer ${accessToken}`}
+      };
+      let response = null;
+
+      try{
+        let result = await fetch(`https://webapi.depop.com/api/v1/shop/products/?lang=en&cursor=${cursor}&limit=24`, options);
+        response = await result.json();
+      }
+      catch {
+          console.log("https://webapi.depop.com/api/v1/shop/products/?lang=en&cursor=&limit=24 failed")
+      }
+    return response;
+}
+
+async function GetAllUnsoldSlugs(){
+    let unsoldListing = [];
+    let cursor = "";
+    let response = await GetTwentyFourListings(tokens.accesstoken, cursor);
+    while(true){
+          if(response.products[response.products.length - 1].status != "ONSALE") {
+            for(const product of response.products){
+                if(product.status == "ONSALE") {
+                    unsoldListing.push(product.slug);
+                }
+            }
+            break;
+          }
+          else {
+              for(const product of response.products){
+                unsoldListing.push(product.slug);
+              }
+              cursor = response.meta.cursor;
+              await sleep(1);
+          }
+    }
+    tokens.numberOfListings = unsoldListing.length;
+    return unsoldListing;
+}
+
+async function GetListing(slug){
+    const options = {
+        method: 'GET',
+        headers: {Authorization: `Bearer ${tokens.accesstoken}`}
+      };
+      let response = null;
+      try {
+        response = await fetch(`https://webapi.depop.com/api/v2/products/${slug}/`, options);
+        response = await response.json();
+      }
+      catch {
+        console.log(`https://webapi.depop.com/api/v2/products/${slug}/ Failed`);
+      }
+    return response;
+}
 
 
-});
+
+async function PutListing(getListingResponse){
+    let pictureIds = [];
+    for(const picture of getListingResponse.pictures){
+        pictureIds.push(picture[0].id);
+    }
+    
+    let resultBody = JSON.stringify({"pictureIds": pictureIds,
+    "description": getListingResponse.description,
+    "group": getListingResponse.group,
+    "productType": getListingResponse.productType,
+    "attributes": getListingResponse.attributes,
+    "gender": getListingResponse.gender,
+    "variantSetId": getListingResponse.variantSetId,
+    "nationalShippingCost": getListingResponse.price.nationalShippingCost,
+    "priceAmount": getListingResponse.price.priceAmount,
+    "variants": getListingResponse.variants,
+    "shippingMethods": getListingResponse.shippingMethods,
+    "priceCurrency": getListingResponse.price.currencyName,
+    "address": getListingResponse.address,
+    "countryCode": getListingResponse.countryCode,
+    "categoryId": getListingResponse.categoryId,
+    "brandId": getListingResponse.brandId,
+    "isKids": getListingResponse.isKids});
+
+    const options = {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${tokens.accesstoken}`,
+          "Content-Type": "application/json"
+        },
+        body: resultBody,
+        redirect: 'follow'
+      };
+      let response = null;
+      try {
+        response = await fetch(`https://webapi.depop.com/api/v2/products/${getListingResponse.slug}/`, options);
+        return response.status;
+      }
+      catch {
+          response = await response.json();
+        return response;
+      }
+
+}
+async function MoveSoldListingToBottom() {
+    const options = {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+           Authorization: `Bearer ${tokens.accesstoken}`
+        },
+        body: '{"move_sold_to_end":true,"changeset":[]}'
+      };
+      let response = null;
+      try {
+        response = await fetch(`https://webapi.depop.com/api/v1/shop/${tokens.userid}/rearrange`, options)
+      }   
+      catch(e) {
+        console("Exception in Move Sold Listings To Bottom", e);
+      }
+      if(response.status != 204) {
+          console.log("Move Sold Listings to Bottom Failed", response);
+      }
+}
+async function RefreshAllListings(){
+    let slugs = await GetAllUnsoldSlugs();
+    displayNumberOfUnSoldItems();
+
+    for(const slug of slugs){
+      
+      let individualListing = await GetListing(slug);
+      showPicture(individualListing.pictures[0][0].url);
+      await sleep(tokens.actionRefreshRate/2);
+      await PutListing(individualListing);
+      await sleep(tokens.actionRefreshRate/2);
+      if (tokens.stopRefresh){
+        break;
+      }
+      incrementItems();
+    }
+    await MoveSoldListingToBottom();
+    if(tokens.stopRefresh == false) {
+      RemovePicture();
+      interval();
+    }
+}
