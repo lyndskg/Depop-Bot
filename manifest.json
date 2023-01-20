@@ -2,14 +2,19 @@
     "name": "Depop Bot",
     "version": "1.0",
     "description": "A simple bot to automate Depop functionalities.",
-    "permissions": ["activeTab", "declarativeContent", "storage"],
+    
+    "manifest_version": 3,
+
+    "permissions": ["activeTab", "declarativeContent", "storage", "scripting", "identity", "cookies"],
+    "host_permissions": ["<all_urls>"], 
+    
     "background": {
-        "scripts": ["background.js"],
-        "persistent": true
+        "service_worker": "background.js"
     },
-    "page_action": {
+
+    "action": {
         "default_popup": "popup.html"
     },
-    "options_page": "options.html",
-    "manifest_version": 2
+
+    "options_page": "options.html"
 }
