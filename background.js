@@ -17,6 +17,10 @@
   chrome.storage.sync.get(['username'], function (result) {
     console.log('username is: ' + result.username);
   });
+
+  chrome.storage.sync.get(['password'], function (result) {
+    console.log('password is: ' + result.password);
+  });
   
   function getUserItems() {
     chrome.storage.sync.get(['userId'], function (result) {

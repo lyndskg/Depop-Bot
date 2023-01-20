@@ -9,22 +9,16 @@ loginButton.addEventListener("click", async () => {
 
   //get bearer token / username 
   setBearer();
+
   login(document.getElementById("UserName").value);
-  login(document.getElementById("PassWord").value);
 });
 
-function login(userNameInput, passWordInput) {
+function login(userNameInput) {
   let username = userNameInput;
-  let password = passWordInput;
-
-  console.log(username, password);
+  console.log(username);
 
   chrome.storage.sync.set({ username }, function () {
     console.log('username is set to ' + username);
-  });
-
-  chrome.storage.sync.set({ password }, function () {
-    console.log('password is set to ' + password);
   });
 
   const requestOptions = {
@@ -32,9 +26,13 @@ function login(userNameInput, passWordInput) {
     redirect: 'follow'
   };
 
-  fetch("https://webapi.depop.com/api/v1/shop/" + userNameInput, requestOptions)
-    .then(response => response.json())
-    .then(result => {
+  var responseClone; 
+  fetch("https://depop.com/" + userNameInput, requestOptions)
+    .then(function (response) {
+      responseClone = response.clone();
+      return response.json();
+    })
+    .then(function (result) {
       userId = result.id;
       
       chrome.storage.sync.set({ userId }, function () {
@@ -43,5 +41,11 @@ function login(userNameInput, passWordInput) {
         chrome.action.setPopup({ popup: "popup.html" });
         window.location.href = "popup.html";
       })
+    }, function (rejectionReason) {
+        console.log('Error parsing JSON from response:', rejectionReason, responseClone); // 4
+        responseClone.text() // 5
+        .then(function (bodyText) {
+          console.log('Received the following instead of valid JSON:', bodyText); // 6
+        });
     });
 }
