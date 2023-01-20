@@ -31,7 +31,7 @@ chrome.storage.sync.get(['isLoggedIn'], function (result) {
     });
   }
 
-  
+
   function refreshListing(item, bearer) {
     //loop through values and created refresh request
     console.log(item);
@@ -99,45 +99,4 @@ chrome.storage.sync.get(['isLoggedIn'], function (result) {
     refreshAllListings();
   });
   
-  async function refreshAllListings() {
-    //get all items
-    //iternate over response passing slug to getItem
-    //pause for 0.5 seconds for each item
-  
-    var requestOptions = {
-      method: 'GET',
-      redirect: 'follow'
-    };
-  
-    chrome.storage.sync.get(['userId'], function (result) {
-      paginatedRefresh('', false, result.userId.toString());
-    });
-  
-    function paginatedRefresh(page, end, userId) { //24 limit
-      fetch("https://webapi.depop.com/api/v1/shop/" + userId + "/products/?limit=24&offset_id=" + page, requestOptions)
-        .then(response => response.json())
-        .then(result => {
-          //refresh all items from current api call
-          interateThroughItems(result.products);
-  
-          //keep fetching if not at end
-          if (end == false) {
-            return paginatedRefresh(result.meta.last_offset_id, result.meta.end, userId);
-          }
-        });
-    }
-  
-    async function interateThroughItems(items) {
-      let itemCount = 0;
-      for (const item of items) {
-        itemCount++;
-        //wait 0.5 sec
-        delay(500);
-        getItemThenRefresh(item.slug);
-      }
-      console.log("Items refreshed: " + itemCount);
-    }
-  }
-  //delay helper function
-  const delay = ms => new Promise(res => setTimeout(res, ms));
-})
+});
