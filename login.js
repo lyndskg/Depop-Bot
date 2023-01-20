@@ -3,18 +3,15 @@ let loginButton = document.getElementById("LoginButton");
 loginButton.addEventListener("click", async () => {
   //if above successfuly set logged in to true 
   let isLoggedIn = true;
-  chrome.storage.sync.set({ isLoggedIn }, function () {
+
+  chrome.storage.sync.set({isLoggedIn}, function () {
     console.log('isLoggedIn is set to ' + isLoggedIn);
   });
 
   //get bearer token / username 
   setBearer();
-  login(document.getElementById("UserName").value);
-  
 
-  //could be risky if above isnt valid or nothing's returned
-  //getUserItems();
-  //showLoggedInView();
+  login(document.getElementById("UserName").value);
 });
 
 function login(userNameInput) {

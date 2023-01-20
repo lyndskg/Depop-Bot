@@ -2,8 +2,8 @@
   chrome.storage.sync.get(['isLoggedIn'], function (result) {
     if (result.isLoggedIn) { //logged in
       chrome.action.setPopup({popup: "popup.html"});
-      setBearer();
-      getUserItems();
+      // setBearer();
+      // getUserItems();
     }
     else { //logged out
       chrome.action.setPopup({popup: "login.html"});
@@ -22,114 +22,3 @@
     console.log('password is: ' + result.password);
   });
   
-  function getUserItems() {
-    chrome.storage.sync.get(['userId'], function (result) {
-      console.log('userId is: ' + result.userId);
-  
-      paginatedDisplay("", false, result.userId.toString());
-    });
-  }
-  
-  function paginatedDisplay(page, end, userId){
-    var requestOptions = {
-      method: 'GET',
-      redirect: 'follow'
-    };
-    fetch("https://webapi.depop.com/api/v1/shop/" + userId + "/products/?limit=24&offset_id="+page, requestOptions)
-      .then(response => response.json())
-      .then(result => {
-        displayItems(result)
-  
-        if (end == false) {
-          return paginatedDisplay(result.meta.last_offset_id, result.meta.end, userId);
-        }
-      })
-      .catch(error => console.log('error', error));
-  }
-  
-  async function displayItems(result) {
-    for (const item of result.products) {
-      if (item.status == "ONSALE") {
-        var table = document.getElementById("ItemsTable");
-        var newRow = table.insertRow();
-  
-        // Insert a cell at the end of the row
-        var descCell = newRow.insertCell(0);
-  
-        //find start of description after username
-        var start = 0;
-        for (char of item.slug) {
-          if (char == '-') {
-            break;
-          }
-          start++;
-        }
-  
-        // Append a text node to the cell
-        var newText = document.createTextNode(item.slug.substr(++start, item.slug.length));
-        descCell.appendChild(newText);
-  
-        var priceCell = newRow.insertCell(1);
-  
-        newText = document.createTextNode(item.price.currency_symbol + item.price.price_amount);
-        priceCell.appendChild(newText);
-  
-        var lastRefreshCell = newRow.insertCell(2);
-  
-        newText = document.createTextNode("to-do  ");
-        lastRefreshCell.appendChild(newText);
-  
-        var updateButtonCell = newRow.insertCell(3);
-  
-        var btn = document.createElement("BUTTON");   // Create a <button> element
-        btn.setAttribute("name", "refresh");
-        btn.setAttribute("id", item.slug);
-        btn.innerHTML = "Refresh";
-        updateButtonCell.appendChild(btn);
-      }
-    }
-  }
-
-
-async function refreshAllListings() {
-    //get all items
-    //iternate over response passing slug to getItem
-    //pause for 0.5 seconds for each item
-  
-    var requestOptions = {
-      method: 'GET',
-      redirect: 'follow'
-    };
-  
-    chrome.storage.sync.get(['userId'], function (result) {
-      paginatedRefresh('', false, result.userId.toString());
-    });
-  
-    function paginatedRefresh(page, end, userId) { //24 limit
-      fetch("https://webapi.depop.com/api/v1/shop/" + userId + "/products/?limit=24&offset_id=" + page, requestOptions)
-        .then(response => response.json())
-        .then(result => {
-          //refresh all items from current api call
-          iterateThroughItems(result.products);
-  
-          //keep fetching if not at end
-          if (end == false) {
-            return paginatedRefresh(result.meta.last_offset_id, result.meta.end, userId);
-          }
-        });
-    }
-  
-    async function iterateThroughItems(items) {
-      let itemCount = 0;
-      for (const item of items) {
-        itemCount++;
-        //wait 0.5 sec
-        delay(500);
-        getItemThenRefresh(item.slug);
-      }
-      console.log("Items refreshed: " + itemCount);
-    }
-  }
-
-  //delay helper function
-  const delay = ms => new Promise(res => setTimeout(res, ms));
