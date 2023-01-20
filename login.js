@@ -9,8 +9,12 @@ loginButton.addEventListener("click", async () => {
 
   //get bearer token / username 
   setBearer();
-
   login(document.getElementById("UserName").value);
+  
+
+  //could be risky if above isnt valid or nothing's returned
+  //getUserItems();
+  //showLoggedInView();
 });
 
 function login(userNameInput) {
@@ -26,13 +30,9 @@ function login(userNameInput) {
     redirect: 'follow'
   };
 
-  var responseClone; 
-  fetch("https://depop.com/" + userNameInput, requestOptions)
-    .then(function (response) {
-      responseClone = response.clone();
-      return response.json();
-    })
-    .then(function (result) {
+  fetch("https://webapi.depop.com/api/v1/shop/" + userNameInput, requestOptions)
+    .then(response => response.json())
+    .then(result => {
       userId = result.id;
       
       chrome.storage.sync.set({ userId }, function () {
@@ -41,11 +41,5 @@ function login(userNameInput) {
         chrome.action.setPopup({ popup: "popup.html" });
         window.location.href = "popup.html";
       })
-    }, function (rejectionReason) {
-        console.log('Error parsing JSON from response:', rejectionReason, responseClone); // 4
-        responseClone.text() // 5
-        .then(function (bodyText) {
-          console.log('Received the following instead of valid JSON:', bodyText); // 6
-        });
     });
 }
